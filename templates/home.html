@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Aplicación de Preguntas y Respuestas</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        .spinner-border {
+            display: block;
+            position: fixed;
+            z-index: 1031;
+            top: 50%;
+            right: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="overlay" class="d-none"
+        style="position: fixed; top: 0; left: 0; height: 100vh; width: 100%; background: rgba(0,0,0,0.5); z-index: 999;">
+    </div>
+    <div class="container text-center">
+        <h1 id="pregunta" class="my-4"></h1>
+        <form id="formulario-respuesta" class="mb-4">
+            <div class="form-row">
+                <div class="col-9">
+                    <input type="text" class="form-control" id="respuesta_txt"
+                        placeholder="Escribe tu respuesta aquí...">
+                </div>
+                <div class="col-3">
+                    <input type="submit" class="btn btn-primary w-100" value="Enviar">
+                    <div id="preloader" class="spinner-border text-primary d-none" role="status" style="z-index: 1000;">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <button id="siguiente-pregunta" class="btn btn-success mb-4" disabled>Siguiente pregunta</button>
+        <p id="respuesta-modelo"></p>
+    </div>
+    <script>
+        $(document).ready(function () {
+            //MOSTRAMOS LA PREGUNTA
+            obtenerSiguientePregunta();
+            //CUANDO SE DE CLICK EN ENVIAR
+            $("#formulario-respuesta").submit(function (e) {
+                e.preventDefault();
+                var respuesta_txt = $("#respuesta_txt").val();
+                $("#preloader").removeClass("d-none"); // Muestra el preloader
+                $("#overlay").removeClass("d-none"); // Muestra el overlay
+                //VALIDAMOS LA RESPUESTA ESCRITA POR EL USUARIO
+                $.post("/respuesta", { respuesta_txt: respuesta_txt }, function (data) {
+                    var pregunta_text = $("#pregunta").text().replace("Pregunta: ", "");
+                    //LIMPIAMOS LOS COLORES DE LA RESPUESTA
+                    $("#respuesta-modelo").removeClass("text-danger text-success");
+                    //SI TIENE EL TEXTO MAL SE COLOCA DE COLO ROJO
+                    if (data.respuesta.includes("mal") || data.respuesta.includes("Mal") ) {
+                        $("#respuesta-modelo").addClass("text-danger");
+                        //ESCRIBIMOS LA RESPUESTA (SI ESTA MAL O BIEN)
+                        $("#respuesta-modelo").text(data.respuesta+" Jajaja humano estúpido");
+                    } 
+                    //DE LO CONTRARIO SE COLOCA DE COLO VERDE
+                    else {
+                        $("#respuesta-modelo").addClass("text-success");
+                        $("#respuesta-modelo").text(data.respuesta+" Wow humano eres un genio");
+                    }
+                    //DESHABILITAMOS LA RESPUESTA Y EL BOTON ENVIAR HASTA HACER CLICK EN SIGUIENTE PREGUNTA
+                    $("#respuesta_txt, #formulario-respuesta input[type='submit']").prop("disabled", true);
+                    //HABILITAMOS LA SIGUIENTE PREGUNTA
+                    $("#siguiente-pregunta").prop("disabled", false);
+                    $("#preloader").addClass("d-none"); // Oculta el preloader
+                    $("#overlay").addClass("d-none"); // Oculta el overlay
+                });
+            });
+            $("#siguiente-pregunta").click(function () {
+                obtenerSiguientePregunta();
+            });
+        });
+        //LLAMAMOS A LA SIGUIENTE PREGUNTA
+        function obtenerSiguientePregunta() {
+            //BORRAMOS LA RESPUESTA
+            $("#respuesta_txt").val("");
+            //LLAMAMOS A NUESTRO MODELO EN PYTHON PARA OBTENER UNA PREGUNTA
+            $.get("/pregunta", function (data) {
+                $("#pregunta").text("Pregunta: " + data.pregunta);
+            });
+            //HABILITAMOS LA RESPUESTA Y EL BOTON ENVIAR
+            $("#respuesta_txt, #formulario-respuesta input[type='submit']").prop("disabled", false);
+            //DESHABILITAMOS EL BOTON SIGUIENTE PREGUNTA
+            $("#siguiente-pregunta").prop("disabled", true);
+            //SI SE DA CLICK EN SIGUIENTE PREGUNTA BORRAR LA CALIFICACION
+            $("#respuesta-modelo").text("");
+        }
+    </script>
+</body>
+
+</html>
